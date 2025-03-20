@@ -149,6 +149,166 @@
           data.appendStringParenthesis(elem.innerText);
         });
       });
+
+      // Expression tree implementation
+      class Node {
+        constructor(val = null, left = null, right = null) {
+          this.val = val;
+          this.left = left;
+          this.right = right;
+        }
+      }
+
+      // Function to check if a character is an operator
+      function isOperator(c) {
+        return c === '+' || c === '-' || c === '*' || c === '/';
+      }
+
+      // Function to get operator precedence
+      function getPrecedence(operator) {
+        if (operator === '+' || operator === '-') return 1;
+        if (operator === '*' || operator === '/') return 2;
+        return 0;
+      }
+
+      // Function to convert infix expression to postfix (Shunting Yard algorithm)
+      function infixToPostfix(expression) {
+        const output = [];
+        const operators = [];
+        let numBuffer = '';
+        
+        for (let i = 0; i < expression.length; i++) {
+          const char = expression[i];
+          
+          // If it's a digit or decimal point, add to number buffer
+          if (/[0-9.]/.test(char)) {
+            numBuffer += char;
+          } else {
+            // If we have a number in the buffer, add it to output
+            if (numBuffer !== '') {
+              output.push(numBuffer);
+              numBuffer = '';
+            }
+            
+            if (char === '(') {
+              operators.push(char);
+            } else if (char === ')') {
+              while (operators.length > 0 && operators[operators.length - 1] !== '(') {
+                output.push(operators.pop());
+              }
+              // Remove the '(' from the stack
+              if (operators.length > 0) operators.pop();
+            } else if (isOperator(char)) {
+              while (
+                operators.length > 0 && 
+                operators[operators.length - 1] !== '(' && 
+                getPrecedence(operators[operators.length - 1]) >= getPrecedence(char)
+              ) {
+                output.push(operators.pop());
+              }
+              operators.push(char);
+            }
+          }
+        }
+        
+        // Add any remaining number
+        if (numBuffer !== '') {
+          output.push(numBuffer);
+        }
+        
+        // Add any remaining operators
+        while (operators.length > 0) {
+          output.push(operators.pop());
+        }
+        
+        return output;
+      }
+
+      // Function to build an expression tree from postfix expression
+      function buildExpressionTree(postfix) {
+        const stack = [];
+        
+        for (let i = 0; i < postfix.length; i++) {
+          const token = postfix[i];
+          
+          if (isOperator(token)) {
+            // Create a new operator node
+            const right = stack.pop();
+            const left = stack.pop();
+            const node = new Node(token, left, right);
+            stack.push(node);
+          } else {
+            // Create a new operand node
+            stack.push(new Node(token));
+          }
+        }
+        
+        // The final node on the stack is the root of the expression tree
+        return stack.pop();
+      }
+
+      // Function to evaluate the expression tree
+      function evaluateExpressionTree(root) {
+        if (!root) return 0;
+        
+        // If leaf node (operand)
+        if (!root.left && !root.right) {
+          return parseFloat(root.val);
+        }
+        
+        // Evaluate left and right subtrees
+        const leftValue = evaluateExpressionTree(root.left);
+        const rightValue = evaluateExpressionTree(root.right);
+        
+        // Perform the operation
+        switch (root.val) {
+          case '+': return leftValue + rightValue;
+          case '-': return leftValue - rightValue;
+          case '*': return leftValue * rightValue;
+          case '/': return leftValue / rightValue;
+          default: return 0;
+        }
+      }
+
+      // Function to calculate the result of an expression
+      function calculateExpression(expression) {
+        const postfix = infixToPostfix(expression);
+        const tree = buildExpressionTree(postfix);
+        return evaluateExpressionTree(tree);
+      }
+
+      // Add event listener for the equals button
+      const equalsButton = document.querySelector('.equals');
+      equalsButton.addEventListener('click', () => {
+        try {
+          const result = calculateExpression(data.displayString);
+          data.displayString = result.toString();
+          data.updateDisplay();
+        } catch (error) {
+          data.displayString = 'Error';
+          data.updateDisplay();
+        }
+      });
+
+      // Add event listener for decimal point
+      const decimalButton = document.querySelector('.decimal');
+      decimalButton.addEventListener('click', () => {
+        // Check if the last character is already a decimal point
+        if (data.displayString.slice(-1) === '.') return;
+        
+        // Find the last number in the display string
+        let lastNumberIndex = data.displayString.length - 1;
+        while (lastNumberIndex >= 0 && (numberStrs.includes(data.displayString[lastNumberIndex]) || data.displayString[lastNumberIndex] === '.')) {
+          lastNumberIndex--;
+        }
+        
+        // Check if there's already a decimal point in the current number
+        const currentNumber = data.displayString.substring(lastNumberIndex + 1);
+        if (currentNumber.includes('.')) return;
+        
+        // Add the decimal point
+        data.appendStringNum('.');
+      });
     </script>
   </body>
 </html>
